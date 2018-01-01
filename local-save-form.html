@@ -1,0 +1,181 @@
+<link rel="import" href="../polymer/polymer-element.html">
+<link rel="import" href="../polymer/lib/utils/flattened-nodes-observer.html">
+<link rel="import" href="../app-storage/app-localstorage/app-localstorage-document.html">
+<link rel="import" href="../iron-ajax/iron-ajax.html">
+
+<dom-module id="local-save-form">
+  <template>
+    <style>
+     :host {
+         display: block;
+     }
+     #progress {
+         border: 2px solid red;
+         background: white;
+     }
+     .hidden {
+         display: none;
+     }
+         
+    </style>
+    <div>
+      <app-localstorage-document
+          id="saver"
+          key="[[storageId]]"
+          data="{{_unsavedData}}"></app-localstorage-document>
+      <iron-ajax id="sender"
+                 with-credentials
+                 on-response="onSubmitResponse"
+                 on-error="onSubmitError"></iron-ajax>
+      <slot></slot>
+      <div id="progress" class="hidden">
+        
+      </div>
+    </div>
+  </template>
+
+  <script>
+   /**
+    * `local-save-form`
+    * form element that won&#39;t lose your entry until submit succeeds. Only
+    * works with a few form field types, and might only have the right submit
+    * semantics for actions that return a redirect with Location.
+    *
+    * @customElement
+    * @polymer
+    * @demo demo/index.html
+    */
+   class LocalSaveForm extends Polymer.Element {
+       static get is() { return 'local-save-form'; }
+       static get properties() {
+           return {
+               storageId: {
+                   // Unique key for localStorage.
+                   type: String
+               },
+               demoRedirect: {
+                   // If the form submit succeeds, pretend it had a Location
+                   // response header with this value.
+                   type: String
+               },
+               _unsavedData: { type: Object, 
+                               observer: 'onLocalStorageReady' },
+           };
+       }
+
+       ready() {
+           super.ready()
+           this.trackedInputs = {}; // name: node
+           this.firstSubmitButton = null;
+           this._observer = new Polymer.FlattenedNodesObserver(this, (info) => {
+               info.addedNodes.forEach(this.onAddedNode.bind(this));
+               // not handling deletes yet
+               this.loadFromLocalStorage();
+           });
+       }
+
+       disconnectedCallback() {
+           super.disconnectedCallback();
+           this._observer.disconnect();
+       }
+
+       onAddedNode(node) {
+           if (node.tagName == 'FORM') {
+               node.addEventListener('submit', this.onSubmit.bind(this));
+               this.formNode = node;
+           }
+
+           if ((node.tagName == 'BUTTON' || node.tagName == 'INPUT') &&
+               node.type == 'submit' &&
+               !this.firstSubmitButton) {
+               this.firstSubmitButton = node;
+           }
+           
+           if (node.form && node.name) {
+               this.trackedInputs[node.name] = node;
+               node.addEventListener('input', this.onContentChange.bind(this));
+           }
+           
+           node.childNodes.forEach(this.onAddedNode.bind(this));
+       }
+
+       onSubmit(ev) {
+           ev.preventDefault();
+           
+           this.$.sender.url = this.formNode.getAttribute('action');
+           this.$.sender.method = this.formNode.getAttribute('method') || 'GET';
+           this.$.sender.contentType = this.formNode.getAttribute('enctype') ||
+                                       'application/x-www-form-urlencoded';
+           this.$.sender.headers = this.headers;
+
+           if (this.formNode.method.toUpperCase() === 'POST') {
+               this.$.sender.body = this._unsavedData;
+           } else {
+               this.$.sender.params = this._unsavedData;
+           }
+           this.showProgress('sending');
+           setTimeout(() => {
+               this.$.sender.generateRequest();
+           }, 500); // just for UI
+       }
+
+       onSubmitResponse(ev) { 
+           this._unsavedData = {};
+           this.formNode.reset();
+           this.showProgress('ok');
+
+           let redir = this.demoRedirect ||
+                       ev.detail.xhr.getResponseHeader('location');
+           if (!redir) {
+               this.showProgress('Successful background submit.');
+               return;
+           }
+           window.location = redir;
+       }
+
+       onSubmitError(ev) {
+           this.showProgress('Form submit failed. Keeping data.');
+       }
+
+       showProgress(msg) {
+           // position to right of firstSubmitButton or form top
+           this.$.progress.classList.remove('hidden');
+           this.$.progress.innerText = msg;
+       }
+       
+       onContentChange() {
+           this.saveToLocalStorage(); // throttle?
+       }
+
+       onLocalStorageReady() {
+           if (this.localStorageReady) {
+               return;
+           }
+           this.localStorageReady = true;
+           this.loadFromLocalStorage(true);
+       }
+
+       loadFromLocalStorage(first) {
+           if (!this._unsavedData) {
+               return;
+           }
+           for (name in this._unsavedData) {
+               const node = this.trackedInputs[name];
+               if (node) {
+                   node.value = this._unsavedData[name];
+               }
+           }
+       }
+
+       saveToLocalStorage() {
+           const data = {};
+           for (name in this.trackedInputs) {
+               data[name] = this.trackedInputs[name].value;
+           }
+           this._unsavedData = data;
+       }
+   }
+
+   window.customElements.define(LocalSaveForm.is, LocalSaveForm);
+  </script>
+</dom-module>

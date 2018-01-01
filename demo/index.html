@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>local-save-form demo</title>
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+
+    <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+    <link rel="import" href="../local-save-form.html">
+
+    <custom-style>
+      <style is="custom-style" include="demo-pages-shared-styles">
+       local-save-form {
+           border: 2px solid gray;
+           padding: 5px;
+       }
+      </style>
+    </custom-style>
+  </head>
+  <body>
+    <div class="vertical-section-container centered">
+      <h3>Basic local-save-form demo</h3>
+      <demo-snippet>
+        <template>
+          <p>Here is a form whose submit will fail:</p>
+          <local-save-form storage-id="demo">
+            <form method="POST" action="/nonexist">
+              <p>Name: <input type="text" name="name"></p>
+              <p>Comment: <textarea name="comment"></textarea></p>
+              <p><button type="submit">Submit</button></p>
+              <p><input type="submit" value="another submit"></p>
+            </form>
+          </local-save-form>
+
+          <p>Here is a form whose submit will succeed:</p>
+          <local-save-form storage-id="demo2" demo-redirect="page2.html">
+            <form method="GET" action=".">
+              <p>Name: <input type="text" name="name"></p>
+              <p>Comment: <textarea name="comment"></textarea></p>
+              <p><button type="submit">Submit</button></p>
+            </form>
+          </local-save-form>  
+          
+        </template>
+      </demo-snippet>
+    </div>
+  </body>
+</html>

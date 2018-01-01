@@ -1,0 +1,14 @@
+{
+  "name": "local-save-form",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "drewp@bigasterisk.com",
+  "license": "MIT",
+  "dependencies": {
+    "polymer-cli": "^1.5.7"
+  }
+}
